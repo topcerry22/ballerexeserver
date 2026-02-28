@@ -309,8 +309,20 @@ app.get('/api/leagues/:id', (req,res) => {
 
 app.post('/api/share-team', auth, (req,res) => {
   const u = DB.users[req.user.username];
-  const code = u.username.toUpperCase().slice(0,6).padEnd(4,'0');
-  DB.shareTeams[code] = { name:u.teamName, robots:u.robots, programs:u.programs, field:u.field, savedAt:Date.now() };
+  // Generate a fresh random 6-char alphanumeric code each time
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<6;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  // Store snapshot of current team data
+  DB.shareTeams[code] = {
+    name:     u.teamName,
+    robots:   u.robots   || [],
+    programs: u.programs || {},
+    field:    u.field    || {},
+    savedAt:  Date.now()
+  };
+  // Also index by username so old codes from same user are replaced
+  if(u.shareCode && u.shareCode !== code) delete DB.shareTeams[u.shareCode];
   u.shareCode = code;
   saveDB();
   res.json({ code });
